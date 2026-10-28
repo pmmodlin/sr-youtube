@@ -1,0 +1,11 @@
+{
+  "repo": "https://github.com/Maasea/sgmodule",
+  "commit": "65075cdb388fc5e3094afd7e7314c67b243f3525",
+  "commitDate": "2026-07-19T08:33:52Z",
+  "files": {
+    "YouTube.Enhance.sgmodule": "9c7464733c54417da36aff09482d1287cee5ecd531ad856842912704b5b3f64d",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "Script/Youtube/youtube.response.js": "f98483d5f5017514f82502253c0db5ce2d4ffb7839887aa2cadc22666f5a7f12",
+    "Script/Youtube/youtube.request.js": "3ecca15e06e76a31720092c581180f648ef2c45e494644941ba985c878efbb26"
+  }
+}

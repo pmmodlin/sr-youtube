@@ -1,0 +1,62 @@
+#!name=YouTube без рекламы
+#!desc=Убирает рекламу в приложениях YouTube и YouTube Music. Вся обработка — на телефоне, без сторонних серверов. Нужен включённый MITM с доверенным сертификатом.
+#!arguments=Скрыть_кнопку_загрузки:true,Скрыть_кнопку_клипов:true,Скрыть_вкладку_Shorts:false,Перевод_субтитров:off,Режим_отладки:false
+#!arguments-desc=Скрыть_…: true — скрыть, false — оставить.\nПеревод_субтитров: код языка Google Translate (например ru, en, uk) или off — не переводить.\nРежим_отладки: true — подробные логи в журнале Shadowrocket.
+
+# ============================================================================
+#  YouTube без рекламы — модуль для Shadowrocket                   {{version}}
+#  Исходники и описание: https://github.com/{{owner}}/{{repo}}
+#
+#  Основан на Maasea/sgmodule (Apache-2.0), коммит {{upstream_commit}}.
+#  Код Maasea не изменён, но запускается внутри обёртки yt-guard, которая
+#  не выпускает трафик никуда, кроме серверов Google/YouTube:
+#  {{allow_list}}
+#
+#  Этот файл собран из src/YouTubeAds.sgmodule командой tools/build.mjs.
+#  Ссылки на скрипты закреплены за тегом {{version}}: код по ним не изменится,
+#  пока вы сами не обновите модуль.
+# ============================================================================
+
+
+[Rule]
+# --- Запрет QUIC (HTTP/3) для YouTube -----------------------------------------
+# MITM в Shadowrocket работает только с TCP (HTTP/1.1, HTTP/2). Если приложение
+# пойдёт по QUIC (UDP 443), трафик пройдёт мимо скриптов и реклама вернётся.
+# REJECT-NO-DROP сразу отвечает отказом, и приложение без задержки
+# переключается на TCP.
+AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP)),REJECT-NO-DROP
+AND,((DOMAIN,youtubei.googleapis.com),(PROTOCOL,UDP)),REJECT-NO-DROP
+
+
+[Script]
+# --- 1. Чистка ответов API YouTube --------------------------------------------
+# Перехватывает ответы youtubei.googleapis.com (формат protobuf) и удаляет
+# из них рекламу:
+#   player              — рекламные вставки до/во время видео; заодно
+#                         разрешает фоновое воспроизведение и «картинку в картинке»;
+#   browse, next,       — рекламные карточки и промо в ленте, в рекомендациях
+#   search, guide       — под видео и в поиске; кнопки нижней панели по настройкам;
+#   reel_watch_sequence — реклама между Shorts;
+#   get_setting, config,
+#   get_watch, log_event — служебные ответы, чтобы приложение не заметило подмену.
+youtube.response = type=http-response,pattern=^https:\/\/youtubei\.googleapis\.com\/(youtubei\/v1\/(browse|next|player|search|reel\/reel_watch_sequence|guide|account\/get_setting|get_watch|log_event|config))(\?(.*))?$,requires-body=1,max-size=-1,binary-body-mode=1,script-path={{script:Script/Youtube/youtube.response.js}},argument="{"captionLang":"{{{Перевод_субтитров}}}","blockUpload":{{{Скрыть_кнопку_загрузки}}},"blockImmersive":{{{Скрыть_кнопку_клипов}}},"blockShorts":{{{Скрыть_вкладку_Shorts}}},"debug":{{{Режим_отладки}}}}"
+
+# --- 2. Запросы initplayback (механизм Onesie) --------------------------------
+# Новые версии приложения получают видео вместе с рекламой одним
+# зашифрованным потоком (Onesie). Оригинальный скрипт Maasea в этом месте
+# отправляет запрос — вместе с ключом клиента — на сторонний сервер
+# init-stream.maasea.workers.dev. Обёртка yt-guard это запрещает: отвечает
+# пустым ответом и стирает ключ Onesie, после чего приложение запрашивает
+# обычный /youtubei/v1/player, и его чистит скрипт №1.
+youtube.request.init = type=http-request,pattern=^https?:\/\/[\w-]+\.googlevideo\.com\/initplayback.+&ack.*,requires-body=1,max-size=-1,binary-body-mode=1,script-path={{script:Script/Youtube/youtube.request.js}},argument="{"captionLang":"{{{Перевод_субтитров}}}"}"
+
+# --- 3. Телеметрия log_event ---------------------------------------------------
+# Убирает из запроса заголовки, по которым приложение сверяет состояние кэша,
+# чтобы подмена ответов не приводила к ошибкам воспроизведения.
+youtube.request.log_event = type=http-request,pattern=^https:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/log_event,requires-body=1,max-size=-1,binary-body-mode=1,script-path={{script:Script/Youtube/youtube.request.js}}
+
+
+[MITM]
+# Расшифровывать только то, что нужно скриптам. Остальной трафик Google
+# (почта, аккаунт, поиск) модуль не трогает.
+hostname = %APPEND% *.googlevideo.com, youtubei.googleapis.com

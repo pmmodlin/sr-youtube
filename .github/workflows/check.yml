@@ -1,0 +1,23 @@
+# Проверка при каждом push и pull request:
+# сборка воспроизводима и все тесты tools/verify.mjs проходят.
+name: Проверка
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Сборка совпадает с файлами в репозитории
+        run: node tools/build.mjs --check
+      - name: Тесты
+        run: node tools/verify.mjs

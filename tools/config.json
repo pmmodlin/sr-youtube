@@ -1,0 +1,36 @@
+{
+  "version": "v1.0.0",
+  "github": {
+    "owner": "pmmodlin",
+    "repo": "sr-youtube"
+  },
+  "guardVersion": "1.0.0",
+  "module": {
+    "template": "src/YouTubeAds.sgmodule",
+    "output": "YouTubeAds.sgmodule"
+  },
+  "scripts": [
+    "Script/Youtube/youtube.response.js",
+    "Script/Youtube/youtube.request.js"
+  ],
+  "allowedHosts": [
+    "googlevideo.com",
+    "youtube.com",
+    "googleapis.com",
+    "ytimg.com",
+    "ggpht.com",
+    "gstatic.com"
+  ],
+  "knownRelays": [
+    "init-stream.maasea.workers.dev",
+    "stream.maasea.workers.dev"
+  ],
+  "harmlessHosts": [
+    "github.com"
+  ],
+  "onesieCache": {
+    "storeKey": "YouTubeConfig",
+    "videoKey": "youtube",
+    "musicKey": "youtubeMusic"
+  }
+}
